@@ -1,0 +1,16 @@
+1. 进入可视化0610
+2. conda activate r_s_test
+3. python stream_receiverV9.py
+4. 连接宇树网络
+5. 浏览器打开http://192.168.1.118:8001/stream/robot、http://192.168.1.118:8001/stream/grasp，检查画面（没画面就找A2组）
+6. 新开一个终端 python full_process0714.py 
+7. 新开一个终端 python pc_b_v3.py（会自动启动大屏可视化v22.html）
+8. Google打开终端输出ip即可
+9. mock_a2_signals0720.py可以模拟任何信号，没有联调的时候可以用模拟信号实现流程。
+
+
+ps：
+1. reid如果出问题，就找a1组，让他们开服务
+2. 在210房间网络总出问题，可以把网络连接写进代码里
+3. 出现各种问题重启full_process程序重新开始即可，但要注意，其他组也得同步重新开始
+4. 看不懂代码让ai讲即可
