@@ -1,0 +1,1398 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>智能养老机器人 - 伴护交互大屏系统</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* 虚拟人呼吸动效 */
+        @keyframes avatarBreath {
+            0%, 100% { transform: scale(1) translateY(0px); filter: drop-shadow(0 0 25px rgba(245, 158, 11, 0.15)); }
+            50% { transform: scale(1.015) translateY(-4px); filter: drop-shadow(0 0 40px rgba(245, 158, 11, 0.3)); }
+        }
+        .avatar-animate {
+            animation: avatarBreath 5s ease-in-out infinite;
+        }
+
+        /* ----------------------------------------- */
+        /* 高密度科技感拟真声波样式 - 适配白色背景 */
+        /* ----------------------------------------- */
+        .sound-bar-main {
+            width: 2.5px;           
+            background: #06b6d4; 
+            border-radius: 2px; 
+            box-shadow: 0 0 3px rgba(6, 182, 212, 0.3); 
+            transform-origin: center; 
+            will-change: transform;
+            flex-shrink: 0;
+        }
+
+        @keyframes wave-eq-1 { 0% { transform: scaleY(0.15); } 100% { transform: scaleY(1); } }
+        @keyframes wave-eq-2 { 0% { transform: scaleY(0.25); } 100% { transform: scaleY(0.85); } }
+        @keyframes wave-eq-3 { 0% { transform: scaleY(0.10); } 100% { transform: scaleY(0.70); } }
+        @keyframes wave-eq-4 { 0% { transform: scaleY(0.35); } 100% { transform: scaleY(0.95); } }
+    </style>
+</head>
+<body class="bg-stone-100 text-stone-800 font-sans overflow-hidden w-screen h-screen flex flex-col select-none relative">
+
+    <audio id="bg-music" src="音乐.MP3" loop preload="auto"></audio>
+
+    <div id="black-screen" class="absolute inset-0 bg-black z-[100] flex items-center justify-center cursor-pointer transition-opacity duration-1000">
+        <p class="text-stone-500 text-xl tracking-widest animate-pulse">系统已就绪，等待按铃接入...</p>
+    </div>
+
+    <main class="flex-1 flex w-full h-[calc(100vh-136px)] p-6 gap-6 box-border">
+        
+        <div class="w-[56.25%] h-full rounded-[2.5rem] shadow-2xl relative bg-stone-900 overflow-hidden isolate" style="transform: translateZ(0);">
+            
+            <div id="avatar-container" class="avatar-animate w-full h-full relative rounded-[2.5rem] overflow-hidden">
+                <video id="avatar-video" class="w-full h-full object-cover absolute inset-0 rounded-[2.5rem]" src="1.待机.mp4" autoplay loop muted playsinline></video>
+            </div>
+
+            <div id="left-stream-container" class="hidden w-full h-full relative rounded-[2.5rem] overflow-hidden bg-stone-800">
+                <img id="left-stream-img" class="w-full h-full object-cover absolute inset-0" src="" alt="机器人实时视角">
+                
+                <div id="video-mask" class="hidden absolute inset-0 bg-black/10 z-10 pointer-events-none"></div>
+                <div id="main-crosshair" class="hidden absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-24 h-24 border-2 border-emerald-500/80 rounded-full flex items-center justify-center z-20 shadow-[0_0_15px_rgba(16,185,129,0.3)]">
+                    <div class="w-3 h-3 bg-emerald-500 rounded-full shadow-[0_0_10px_#10b981]"></div>
+                </div>
+                <div id="target-bbox" class="hidden absolute top-[25%] left-[30%] w-[40%] h-[50%] border-4 border-emerald-500 bg-emerald-500/20 flex flex-col justify-between p-2 z-20 shadow-[0_0_20px_rgba(16,185,129,0.4)] transition-all">
+                    <span id="bbox-label" class="text-base font-mono bg-emerald-600 text-white px-2 py-1 rounded w-max shadow-md">锁定目标: 徐静</span>
+                </div>
+                <div id="reid-tip" class="hidden absolute top-6 left-1/2 -translate-x-1/2 bg-black/60 text-white px-4 py-2 rounded-lg text-base z-20">
+                    正在识别中... 已匹配 <span id="reid-count">0</span>/4 次
+                </div>
+            </div>
+        </div>
+
+        <div class="w-[43.75%] h-full flex flex-col gap-6">
+            
+            <div class="h-[55.55%] w-full bg-stone-900 rounded-[2.5rem] shadow-xl relative overflow-hidden border-4 border-stone-800 flex flex-col">
+                <div class="w-full h-full bg-stone-800 relative flex items-center justify-center rounded-[2.25rem] overflow-hidden">
+                    <video id="right-video" class="absolute inset-0 w-full h-full object-cover rounded-[2.25rem]" 
+                           src="机器人休息待机视频.mp4" autoplay loop muted playsinline></video>
+                </div>
+            </div>
+
+            <div id="persistent-status-box" class="h-[44.44%] w-full bg-stone-50 border-amber-500 rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.06)] px-12 py-10 flex flex-col justify-between transition-all duration-500 border-4 relative overflow-hidden">
+                <div class="flex-1 flex flex-col justify-center relative z-10">
+                    <p id="persistent-status-text" class="text-[2.0rem] leading-[1.5] font-bold text-stone-800 tracking-wide">
+                        大屏幕接入中...
+                    </p>
+                    
+                    <div id="sound-wave-container" class="hidden mt-3 w-full h-20 relative flex items-center justify-center overflow-hidden transition-opacity duration-300">
+                        
+                        <div class="absolute w-full border-t-[1px] border-dashed border-cyan-400/40 top-[50%] z-10 pointer-events-none"></div>
+
+                        <div id="main-wave-container" class="absolute inset-0 flex items-center justify-center gap-[2.5px] z-20 px-2 pointer-events-none"></div>
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-end mt-2 z-10 relative">
+                    <span id="connection-status" class="text-stone-400 text-sm"> </span>
+                </div>
+                
+                <div id="wave-glow" class="hidden absolute left-10 bottom-16 w-64 h-32 bg-cyan-300/10 blur-3xl pointer-events-none transition-opacity duration-500"></div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- ========== 视频通话覆盖层：WebRTC 直接运行在大屏顶层页面，不再使用 iframe ========== -->
+    <div id="call-overlay" class="hidden absolute inset-0 z-[200] bg-slate-950 text-white">
+        <div class="w-full h-full p-5 box-border flex flex-col gap-4">
+            <div class="flex items-center justify-between gap-4 flex-wrap bg-slate-900 border border-slate-700 rounded-2xl px-6 py-4">
+                <div class="min-w-0">
+                    <div class="text-2xl font-bold tracking-wide">视频通话</div>
+                    <div id="call-status" class="mt-1 text-base text-sky-300">等待进入通话</div>
+                </div>
+                <div class="flex items-center gap-3 flex-wrap justify-end">
+                    <select id="call-host" class="bg-slate-800 border border-slate-600 rounded-xl px-3 py-2 text-sm text-white min-w-[220px]">
+                        <option value="">正在扫描局域网…</option>
+                    </select>
+                    <button id="call-refresh" type="button" class="px-4 py-2 rounded-xl bg-slate-700 hover:bg-slate-600">重新扫描</button>
+                    <button id="call-reconnect" type="button" class="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500">重新连接</button>
+                    <button id="call-hangup" type="button" class="px-5 py-2 rounded-xl bg-red-600 hover:bg-red-500 disabled:opacity-50" disabled>挂断</button>
+                </div>
+            </div>
+
+            <div class="relative flex-1 min-h-0 rounded-3xl overflow-hidden bg-black border border-slate-700">
+                <video id="call-remote" class="absolute inset-0 w-full h-full object-cover bg-black" autoplay muted playsinline></video>
+
+                <div id="call-remote-hint" class="absolute inset-0 flex items-center justify-center z-10 pointer-events-none">
+                    <div class="bg-black/60 text-slate-200 px-6 py-3 rounded-xl text-lg">正在等待对方画面…</div>
+                </div>
+
+                <div class="absolute top-5 left-5 z-20 bg-black/60 rounded-lg px-3 py-1 text-sm">对方画面</div>
+
+                <div class="absolute right-6 bottom-6 z-20 w-[22%] min-w-[220px] max-w-[360px] aspect-video rounded-2xl overflow-hidden border-2 border-slate-500 bg-black shadow-2xl">
+                    <video id="call-local" class="w-full h-full object-cover" autoplay muted playsinline></video>
+                    <div class="absolute top-2 left-2 bg-black/60 rounded-md px-2 py-1 text-xs">本机</div>
+                </div>
+
+                <button id="call-enable-audio" type="button" class="hidden absolute left-1/2 -translate-x-1/2 bottom-7 z-30 px-6 py-3 rounded-full bg-blue-600 hover:bg-blue-500 font-bold shadow-xl">
+                    点击开启对方声音
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ========== 背景音乐控制 ==========
+        const bgMusic = document.getElementById('bg-music');
+        bgMusic.volume = 0.15; 
+
+        function playBgm() {
+            if (bgMusic && bgMusic.paused) {
+                bgMusic.play().catch(e => console.warn("背景音乐播放失败:", e));
+            }
+        }
+
+        function pauseBgm() {
+            if (bgMusic && !bgMusic.paused) {
+                bgMusic.pause();
+            }
+        }
+
+        // ========== 核心DOM对象 ==========
+        const blackScreen = document.getElementById('black-screen');
+        const avatarContainer = document.getElementById('avatar-container');
+        const leftStreamContainer = document.getElementById('left-stream-container');
+        const leftStreamImg = document.getElementById('left-stream-img');
+        const avatarVideo = document.getElementById('avatar-video');
+        const rightVideo = document.getElementById('right-video');
+        
+        const persistentStatusBox = document.getElementById('persistent-status-box');
+        const persistentStatusText = document.getElementById('persistent-status-text');
+        const connectionStatus = document.getElementById('connection-status');
+        
+        const soundWaveContainer = document.getElementById('sound-wave-container');
+        const waveGlow = document.getElementById('wave-glow');
+
+        const targetBbox = document.getElementById('target-bbox');
+        const mainCrosshair = document.getElementById('main-crosshair');
+        const videoMask = document.getElementById('video-mask');
+        const reidTip = document.getElementById('reid-tip');
+        const reidCount = document.getElementById('reid-count');
+
+        const callOverlay = document.getElementById('call-overlay');
+        const callStatus = document.getElementById('call-status');
+        const callHost = document.getElementById('call-host');
+        const callRefresh = document.getElementById('call-refresh');
+        const callReconnect = document.getElementById('call-reconnect');
+        const callHangup = document.getElementById('call-hangup');
+        const callRemote = document.getElementById('call-remote');
+        const callLocal = document.getElementById('call-local');
+        const callRemoteHint = document.getElementById('call-remote-hint');
+        const callEnableAudio = document.getElementById('call-enable-audio');
+
+        // ========== 配置项 & 全局状态 ==========
+        const STREAM_MAP = {
+            1: "http://127.0.0.1:8001/stream/robot",      
+            2: "http://127.0.0.1:8001/stream/grasp"       
+        };
+
+        const REID_CONFIG = { successThreshold: 4, timeout: 90 * 1000 };
+
+        let currentTaskType = "";
+        let listeningForTask = false;
+        let reidSuccessCount = 0;
+        let reidTimer = null;
+        let currentSequenceId = 0;
+        
+        let isTaskWrappingUp = false; 
+        let wsQueue = [];
+        let isCallMode = false;
+
+        // ========== 核心功能：严格等待视频播放完毕 ==========
+        function waitVideoEnd(videoEl, seqId) {
+            return new Promise((resolve) => {
+                if (!videoEl || (videoEl.paused && videoEl.ended)) return resolve(true);
+                
+                videoEl.loop = false;
+                
+                let timeout = setTimeout(() => {
+                    cleanup();
+                    resolve(currentSequenceId === seqId);
+                }, 60000); 
+
+                const onEnd = () => {
+                    cleanup();
+                    if (currentSequenceId === seqId) resolve(true);
+                    else resolve(false);
+                };
+                const onError = () => { cleanup(); resolve(false); };
+
+                const cleanup = () => {
+                    clearTimeout(timeout);
+                    videoEl.removeEventListener('ended', onEnd);
+                    videoEl.removeEventListener('error', onError);
+                };
+
+                videoEl.addEventListener('ended', onEnd);
+                videoEl.addEventListener('error', onError);
+            });
+        }
+
+        // ========== 自动待机兜底机制 ==========
+        function bindAutoFallback(videoEl, fallbackSrc) {
+            videoEl.addEventListener('ended', () => {
+                setTimeout(() => {
+                    if (videoEl.ended || videoEl.paused) {
+                        const currentSrc = decodeURIComponent(videoEl.src);
+                        if (!currentSrc.includes(fallbackSrc)) {
+                            videoEl.src = fallbackSrc;
+                            videoEl.loop = true;
+                            videoEl.play().catch(e => console.error("自动兜底播放失败:", e));
+                        }
+                    }
+                }, 100);
+            });
+        }
+        bindAutoFallback(avatarVideo, '1.待机.mp4');
+        bindAutoFallback(rightVideo, '机器人休息待机视频.mp4');
+
+        // ========== 初始化 ==========
+        blackScreen.addEventListener('click', () => {
+            blackScreen.classList.add('opacity-0');
+            playBgm(); 
+            setTimeout(() => {
+                blackScreen.classList.add('hidden');
+                triggerStandby();
+            }, 1000);
+        });
+
+        function wsSend(data) {
+            if (ws && ws.readyState === WebSocket.OPEN) { ws.send(JSON.stringify(data)); }
+        }
+
+        // ========== 视频通话模式：直接在大屏顶层页面运行 WebRTC ==========
+        // 重要：本 HTML 必须通过 pc_b_v3.py 提供的
+        // http://127.0.0.1:8080/ 打开，不要再双击 file:// 打开。
+        let callWs = null;
+        let callPc = null;
+        let callLocalStream = null;
+        let callPendingCandidates = [];
+        let callStarting = false;
+        let callIntentionalHangup = false;
+        let callRemoteFallbackStream = new MediaStream();
+        let callVideoWatchTimer = null;
+
+        const CALL_RTC_CONFIG = {
+            iceServers: [
+                { urls: 'stun:stun.l.google.com:19302' },
+                { urls: 'stun:stun.cloudflare.com:3478' }
+            ]
+        };
+
+        function setCallStatus(message) {
+            callStatus.textContent = message;
+            console.log('[CALL]', message);
+        }
+
+        function setCallHint(message = '') {
+            if (!message) {
+                callRemoteHint.classList.add('hidden');
+                return;
+            }
+            callRemoteHint.classList.remove('hidden');
+            const box = callRemoteHint.firstElementChild;
+            if (box) box.textContent = message;
+        }
+
+        function callSend(data) {
+            if (callWs && callWs.readyState === WebSocket.OPEN) {
+                callWs.send(JSON.stringify(data));
+            }
+        }
+
+        async function discoverCallHosts() {
+            const old = callHost.value;
+            callRefresh.disabled = true;
+            setCallStatus('正在扫描局域网中的电脑 A…');
+            try {
+                const hosts = await fetch('/discover', { cache: 'no-store' }).then(r => {
+                    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+                    return r.json();
+                });
+                callHost.innerHTML = hosts.length
+                    ? hosts.map(h => `<option value="${h.ip}">${h.name}（${h.ip}）</option>`).join('')
+                    : '<option value="">未发现电脑 A</option>';
+                if (old && hosts.some(h => h.ip === old)) callHost.value = old;
+                setCallStatus(hosts.length ? `已发现 ${hosts.length} 台可连接设备` : '未发现电脑 A，请检查 PC_A 与防火墙');
+                return hosts;
+            } catch (error) {
+                console.error('[CALL] 设备发现失败:', error);
+                setCallStatus('设备扫描失败：' + error.message);
+                return [];
+            } finally {
+                callRefresh.disabled = false;
+            }
+        }
+
+        async function createCallPeer() {
+            callPc = new RTCPeerConnection(CALL_RTC_CONFIG);
+            const localKinds = new Set();
+
+            if (callLocalStream) {
+                for (const track of callLocalStream.getTracks()) {
+                    localKinds.add(track.kind);
+                    callPc.addTrack(track, callLocalStream);
+                }
+            }
+
+            if (!localKinds.has('audio')) callPc.addTransceiver('audio', { direction: 'recvonly' });
+            if (!localKinds.has('video')) callPc.addTransceiver('video', { direction: 'recvonly' });
+
+            callPc.onicecandidate = event => {
+                if (event.candidate) callSend({ type: 'candidate', candidate: event.candidate });
+            };
+
+            callPc.ontrack = event => {
+                console.log('[CALL] ontrack:', event.track.kind, event.track.readyState, event.streams);
+
+                // 优先使用 WebRTC 原始 MediaStream；这与原来直接打开 127.0.0.1
+                // 能正常工作的 PC_B 页面保持一致。
+                if (event.streams && event.streams[0]) {
+                    callRemote.srcObject = event.streams[0];
+                } else {
+                    if (!callRemoteFallbackStream.getTracks().some(t => t.id === event.track.id)) {
+                        callRemoteFallbackStream.addTrack(event.track);
+                    }
+                    callRemote.srcObject = callRemoteFallbackStream;
+                }
+
+                // 远端视频先静音播放，彻底避开 Chrome/Edge 带声音 autoplay 限制。
+                callRemote.muted = true;
+                callEnableAudio.classList.remove('hidden');
+                setCallHint('已收到远端视频流，正在解码画面…');
+
+                playRemoteVideoSafely();
+                event.track.addEventListener('unmute', playRemoteVideoSafely);
+            };
+
+            callPc.onconnectionstatechange = () => {
+                const state = callPc ? callPc.connectionState : 'closed';
+                console.log('[CALL] connectionState:', state);
+                if (state === 'connected') {
+                    setCallStatus('WebRTC 已连接，正在接收对方视频…');
+                    playRemoteVideoSafely();
+                    startCallVideoWatch();
+                } else if (state === 'failed') {
+                    setCallStatus('WebRTC 连接失败，可点击“重新连接”重试');
+                    setCallHint('连接失败');
+                } else if (state !== 'closed') {
+                    setCallStatus('连接状态：' + state);
+                }
+            };
+
+            callPc.oniceconnectionstatechange = () => {
+                console.log('[CALL] iceConnectionState:', callPc?.iceConnectionState);
+            };
+        }
+
+        async function playRemoteVideoSafely() {
+            if (!callRemote.srcObject) return false;
+            try {
+                callRemote.muted = true;
+                await callRemote.play();
+
+                // play() 成功并不等于第一帧已经解码，因此只有 videoWidth/videoHeight
+                // 有效后才真正隐藏“等待画面”提示。
+                if (callRemote.videoWidth > 0 && callRemote.videoHeight > 0) {
+                    setCallHint('');
+                    setCallStatus('对方画面已显示');
+                    callEnableAudio.classList.remove('hidden');
+                    return true;
+                }
+
+                setCallHint('已接收远端视频，正在等待第一帧…');
+                return false;
+            } catch (error) {
+                console.error('[CALL] remote.play() 失败:', error);
+                setCallHint('远端视频已到达，但浏览器暂未开始播放');
+                return false;
+            }
+        }
+
+        function stopCallVideoWatch() {
+            if (callVideoWatchTimer) {
+                clearInterval(callVideoWatchTimer);
+                callVideoWatchTimer = null;
+            }
+        }
+
+        function startCallVideoWatch() {
+            stopCallVideoWatch();
+            let lastBytes = -1;
+            let noFrameCount = 0;
+
+            callVideoWatchTimer = setInterval(async () => {
+                if (!isCallMode || !callPc || callPc.connectionState === 'closed') {
+                    stopCallVideoWatch();
+                    return;
+                }
+
+                if (callRemote.videoWidth > 0 && callRemote.videoHeight > 0 && callRemote.readyState >= 2) {
+                    setCallHint('');
+                    setCallStatus(`对方画面已显示 ${callRemote.videoWidth}×${callRemote.videoHeight}`);
+                    return;
+                }
+
+                // 通过 getStats 区分“网络没收到视频”和“收到视频但 video 元素没出帧”。
+                try {
+                    const stats = await callPc.getStats();
+                    let inboundVideoBytes = 0;
+                    stats.forEach(report => {
+                        if (report.type === 'inbound-rtp' && report.kind === 'video' && !report.isRemote) {
+                            inboundVideoBytes += Number(report.bytesReceived || 0);
+                        }
+                    });
+
+                    if (inboundVideoBytes > 0) {
+                        if (inboundVideoBytes === lastBytes) noFrameCount += 1;
+                        else noFrameCount = 0;
+                        lastBytes = inboundVideoBytes;
+                        setCallHint('远端视频数据已到达，正在等待浏览器解码第一帧…');
+                        playRemoteVideoSafely();
+                    } else {
+                        setCallHint('WebRTC 已连接，但尚未收到电脑 A 的视频数据…');
+                    }
+                } catch (error) {
+                    console.warn('[CALL] getStats 失败:', error);
+                }
+            }, 1000);
+        }
+
+        async function openBuiltInCamera() {
+            const devices = await navigator.mediaDevices.enumerateDevices();
+            const cameras = devices.filter(device => device.kind === 'videoinput');
+            const externalPattern = /(720p|usb|external|外接)/i;
+            const builtInPattern = /(integrated|built[- ]?in|internal|内置|前置|user)/i;
+
+            // 优先使用名称明确标识为内置的摄像头，其次尝试所有非 USB 摄像头。
+            // 尚未授权时设备名称可能为空：逐个尝试，已被 A1 占用的 USB 摄像头会失败，
+            // 随后继续尝试电脑内置摄像头。
+            const preferred = cameras.filter(device => builtInPattern.test(device.label));
+            const nonExternal = cameras.filter(device =>
+                !preferred.includes(device)
+                && device.label
+                && !externalPattern.test(device.label)
+            );
+            const unlabeled = cameras.filter(device => !device.label);
+            const candidates = [...preferred, ...nonExternal, ...unlabeled];
+
+            for (const camera of candidates) {
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({
+                        video: { deviceId: { exact: camera.deviceId } },
+                        audio: false
+                    });
+                    console.log('[CALL] 已选择本机内置摄像头:', camera.label || camera.deviceId);
+                    return stream;
+                } catch (error) {
+                    console.warn('[CALL] 摄像头不可用，继续尝试下一个:', camera.label || camera.deviceId, error);
+                }
+            }
+
+            // 极少数浏览器在枚举阶段不返回设备，最后请求面向用户的内置摄像头。
+            return navigator.mediaDevices.getUserMedia({
+                video: { facingMode: { ideal: 'user' } },
+                audio: false
+            });
+        }
+
+        async function prepareCallMedia() {
+            setCallStatus('正在请求内置摄像头和麦克风权限…');
+            let videoStream = null;
+            let audioStream = null;
+
+            try {
+                audioStream = await navigator.mediaDevices.getUserMedia({ video: false, audio: true });
+            } catch (audioError) {
+                console.error('[CALL] 麦克风获取失败:', audioError);
+            }
+
+            try {
+                videoStream = await openBuiltInCamera();
+            } catch (videoError) {
+                console.warn('[CALL] 内置摄像头获取失败:', videoError);
+            }
+
+            const tracks = [
+                ...(videoStream ? videoStream.getVideoTracks() : []),
+                ...(audioStream ? audioStream.getAudioTracks() : [])
+            ];
+            callLocalStream = tracks.length ? new MediaStream(tracks) : null;
+
+            if (callLocalStream) {
+                callLocal.srcObject = callLocalStream;
+                callLocal.play().catch(() => {});
+            }
+
+            await createCallPeer();
+        }
+
+        async function flushCallCandidates() {
+            if (!callPc) return;
+            for (const candidate of callPendingCandidates) {
+                try {
+                    await callPc.addIceCandidate(candidate);
+                } catch (error) {
+                    console.warn('[CALL] ICE candidate 添加失败:', error);
+                }
+            }
+            callPendingCandidates = [];
+        }
+
+        async function startCall() {
+            if (callStarting) return;
+            if (callPc && ['new', 'connecting', 'connected'].includes(callPc.connectionState)) return;
+
+            callStarting = true;
+            callIntentionalHangup = false;
+            callReconnect.disabled = true;
+            callHangup.disabled = true;
+            setCallHint('正在建立视频通话…');
+
+            try {
+                let host = callHost.value;
+                if (!host) {
+                    await discoverCallHosts();
+                    host = callHost.value;
+                }
+                if (!host) throw new Error('没有发现电脑 A');
+
+                // 先准备本机媒体和 RTCPeerConnection，再加入信令房间，避免 ready/offer 竞态。
+                await prepareCallMedia();
+
+                callWs = new WebSocket(`ws://${host}:8765/ws`);
+                await new Promise((resolve, reject) => {
+                    const timer = setTimeout(() => reject(new Error('连接电脑 A 信令服务超时')), 5000);
+                    callWs.onopen = () => { clearTimeout(timer); resolve(); };
+                    callWs.onerror = () => { clearTimeout(timer); reject(new Error('无法连接电脑 A 的信令服务')); };
+                });
+
+                callWs.onmessage = async event => {
+                    const message = JSON.parse(event.data);
+                    console.log('[CALL] signal:', message.type);
+
+                    if (message.type === 'error') {
+                        setCallStatus(message.message || '信令服务器返回错误');
+                        return;
+                    }
+
+                    if (message.type === 'ready' && message.initiator) {
+                        const offer = await callPc.createOffer();
+                        await callPc.setLocalDescription(offer);
+                        callSend({ type: 'offer', sdp: callPc.localDescription });
+                        setCallStatus('正在呼叫电脑 A…');
+                    } else if (message.type === 'offer') {
+                        await callPc.setRemoteDescription(message.sdp);
+                        const answer = await callPc.createAnswer();
+                        await callPc.setLocalDescription(answer);
+                        callSend({ type: 'answer', sdp: callPc.localDescription });
+                        await flushCallCandidates();
+                    } else if (message.type === 'answer') {
+                        await callPc.setRemoteDescription(message.sdp);
+                        await flushCallCandidates();
+                    } else if (message.type === 'candidate') {
+                        if (callPc.remoteDescription) {
+                            await callPc.addIceCandidate(message.candidate);
+                        } else {
+                            callPendingCandidates.push(message.candidate);
+                        }
+                    } else if (message.type === 'peer-left') {
+                        setCallStatus('电脑 A 已挂断');
+                        hangupCall(false);
+                        exitCallMode();
+                    }
+                };
+
+                callWs.onclose = event => {
+                    if (!callIntentionalHangup && isCallMode && callPc?.connectionState !== 'connected') {
+                        setCallStatus(`信令连接已关闭（${event.code}）`);
+                    }
+                };
+
+                callSend({ type: 'join', room: 'demo-room' });
+                callHangup.disabled = false;
+                setCallStatus('已加入房间，等待电脑 A…');
+            } catch (error) {
+                console.error('[CALL] 启动失败:', error);
+                setCallStatus('启动失败：' + error.message);
+                setCallHint('通话启动失败，可点击“重新连接”');
+                hangupCall(false);
+            } finally {
+                callStarting = false;
+                callReconnect.disabled = false;
+            }
+        }
+
+        function hangupCall(updateStatus = true) {
+            callIntentionalHangup = true;
+            stopCallVideoWatch();
+
+            const oldWs = callWs;
+            const oldPc = callPc;
+            const oldStream = callLocalStream;
+
+            callWs = null;
+            callPc = null;
+            callLocalStream = null;
+            callPendingCandidates = [];
+            callRemoteFallbackStream = new MediaStream();
+
+            try { oldWs?.close(); } catch (_) {}
+            try { oldPc?.close(); } catch (_) {}
+            oldStream?.getTracks().forEach(track => track.stop());
+
+            callLocal.srcObject = null;
+            callRemote.srcObject = null;
+            callRemote.muted = true;
+            callEnableAudio.classList.add('hidden');
+            callHangup.disabled = true;
+            setCallHint('正在等待对方画面…');
+            if (updateStatus) setCallStatus('已挂断');
+        }
+
+        async function enterCallMode() {
+            if (isCallMode) return;
+
+            console.log('进入视频通话界面');
+            isCallMode = true;
+            listeningForTask = false;
+            currentSequenceId++;
+            isTaskWrappingUp = false;
+            wsQueue = [];
+
+            if (reidTimer) {
+                clearTimeout(reidTimer);
+                reidTimer = null;
+            }
+
+            pauseBgm();
+            hideReidUI();
+            avatarVideo.pause();
+            rightVideo.pause();
+            callOverlay.classList.remove('hidden');
+
+            await startCall();
+        }
+
+        function exitCallMode() {
+            if (!isCallMode) return;
+            console.log('退出视频通话界面，返回待机');
+            isCallMode = false;
+            hangupCall(false);
+            callOverlay.classList.add('hidden');
+            triggerStandby();
+        }
+
+        callRefresh.addEventListener('click', discoverCallHosts);
+        callReconnect.addEventListener('click', async () => {
+            hangupCall(false);
+            await startCall();
+        });
+        callHangup.addEventListener('click', exitCallMode);
+
+        callEnableAudio.addEventListener('click', async () => {
+            if (!callRemote.srcObject) {
+                setCallStatus('对方视频还没有到达');
+                return;
+            }
+            try {
+                callRemote.muted = false;
+                callRemote.volume = 1;
+                await callRemote.play();
+                callEnableAudio.classList.add('hidden');
+                setCallStatus('已开启对方声音，正在音视频通话');
+            } catch (error) {
+                console.error('[CALL] 开启远端声音失败:', error);
+                callRemote.muted = true;
+                setCallStatus('开启声音失败，请再次点击');
+            }
+        });
+
+        ['loadedmetadata', 'canplay', 'playing', 'resize'].forEach(name => {
+            callRemote.addEventListener(name, () => {
+                console.log(`[CALL] remote ${name}:`, callRemote.readyState, callRemote.videoWidth, callRemote.videoHeight);
+                playRemoteVideoSafely();
+            });
+        });
+
+        // 预先发现电脑 A，不会占用摄像头/麦克风。
+        // 必须从 localhost 页面运行，file:// 模式不给通话逻辑兜底。
+        if (location.protocol === 'http:' || location.protocol === 'https:') {
+            discoverCallHosts();
+        } else {
+            console.error('请运行 pc_b_v3.py，并通过 http://127.0.0.1:8080/ 打开大屏。');
+        }
+
+        // ========== 视图控制函数 ==========
+        function updateStatusTheme(statusType) {
+            persistentStatusBox.classList.remove('border-amber-500', 'border-emerald-500', 'border-red-500');
+            if (statusType === 'active' || statusType === 'success') {
+                persistentStatusBox.classList.add('border-emerald-500');
+            } else if (statusType === 'error') {
+                persistentStatusBox.classList.add('border-red-500');
+            } else {
+                persistentStatusBox.classList.add('border-amber-500');
+            }
+        }
+
+        function setLeftPanelMode(mode, src, loop = false) {
+            if (mode === 'avatar') {
+                leftStreamContainer.classList.add('hidden');
+                avatarContainer.classList.remove('hidden');
+                if (src) {
+                    avatarVideo.src = src;
+                    avatarVideo.loop = loop;
+                    avatarVideo.currentTime = 0;
+                    avatarVideo.muted = false;
+                    avatarVideo.play().catch(e => console.error(e));
+                }
+            } else if (mode === 'stream') {
+                avatarContainer.classList.add('hidden');
+                leftStreamContainer.classList.remove('hidden');
+                avatarVideo.pause();
+                if (src) leftStreamImg.src = src;
+            }
+        }
+
+        function setRightVideo(videoName, loop = true) {
+            const currentSrc = decodeURIComponent(rightVideo.src);
+            if (!currentSrc.includes(videoName)) {
+                rightVideo.src = videoName;
+            }
+            rightVideo.loop = loop;
+            rightVideo.play().catch(e => console.error(e));
+        }
+
+        // ========== 流程逻辑控制函数 ==========
+
+        function triggerStandby(delayMs = 0) {
+            // 通话是最高优先级状态，只能由挂断动作退出。
+            if (isCallMode) {
+                console.log('通话中，忽略待机切换');
+                return;
+            }
+
+            // 注意：这里被注释掉了以防止重回待机时自动播放音乐，等待老人发起呼叫。
+            // playBgm(); 
+            if (delayMs > 0){
+              setTimeout(() => playBgm(), delayMs);
+            } else {
+              playBgm();
+            }
+
+            currentTaskType = "";
+            listeningForTask = false;
+            currentSequenceId++; 
+            isTaskWrappingUp = false; 
+            
+            hideReidUI();
+            if (reidTimer) {
+                clearTimeout(reidTimer);
+                reidTimer = null;
+            }
+
+            setLeftPanelMode('avatar', '1.待机.mp4', true);
+            setRightVideo('机器人休息待机视频.mp4', true);
+            
+            persistentStatusText.innerHTML = "大屏待机中";
+            updateStatusTheme('standby');
+
+            if (wsQueue.length > 0) {
+                const queueToProcess = [...wsQueue];
+                wsQueue = [];
+                queueToProcess.forEach((msg, idx) => {
+                    setTimeout(() => processWsMessage(msg.event, msg.text, msg.task_type), idx * 100);
+                });
+            }
+        }
+
+        async function triggerListen() {
+            // 一次举手只询问一次，之后等待找人/取物命令，不重复播放询问。
+            if (listeningForTask || currentTaskType !== "" || isCallMode) return;
+            listeningForTask = true;
+            pauseBgm(); // 🚨听取老人需求时，静音
+
+            currentSequenceId++;
+            const seqId = currentSequenceId;
+
+            setLeftPanelMode('avatar', '2.张阿姨，请问有什么需要帮忙的吗.mp4', false);
+            persistentStatusText.innerHTML = "张阿姨，请问有什么需要帮忙的吗？";
+            updateStatusTheme('standby');
+
+            await waitVideoEnd(avatarVideo, seqId);
+            if (seqId !== currentSequenceId) return;
+
+            setLeftPanelMode('avatar', '1.待机.mp4', true);
+            persistentStatusText.innerHTML = "正在听取您的需求中..."; 
+        }
+
+        // ==================== 找人流程 ====================
+        async function triggerFindStart() {
+            playBgm(); // 🔊明确任务，恢复播放背景音乐
+            
+            currentTaskType = "find";
+            listeningForTask = false;
+            currentSequenceId++;
+            const seqId = currentSequenceId;
+            reidSuccessCount = 0;
+            
+            // 1. 播放视频 15，右侧播放“进门前”视频
+            setLeftPanelMode('avatar', '15.正在寻找何雅瑄.mp4', false);
+            setRightVideo('机器人找人_进门前视频.mp4', true); // ★ 修改点：进门前视频
+            persistentStatusText.innerHTML = "机器人鹏鹏接到任务啦，鹏鹏正在寻找何雅瑄。";
+            updateStatusTheme('active');
+
+            await waitVideoEnd(avatarVideo, seqId);
+            if (seqId !== currentSequenceId) return;
+
+            // 2. 播放视频 5
+            setLeftPanelMode('avatar', '5.鹏鹏正在前往休息室.mp4', false);
+            persistentStatusText.innerHTML = "鹏鹏正在前往休息室";
+
+            await waitVideoEnd(avatarVideo, seqId);
+            if (seqId !== currentSequenceId) return;
+
+            while (seqId === currentSequenceId) {
+                // A. 切成机器人视角，保持 5 秒
+                setLeftPanelMode('stream', STREAM_MAP[1]); 
+                persistentStatusText.innerHTML = "鹏鹏正在前往休息室...";
+                
+                await new Promise(r => setTimeout(r, 5000));
+                if (seqId !== currentSequenceId) break; // 若期间收到到达点位信号，立刻打断
+
+                // B. 随机选择其中一个虚拟人视频与文案
+                const randomAvatars = [
+                    { video: '鹏鹏快到休息室啦.mp4', text: '鹏鹏快到休息室啦' },   // 请确保文件名与实际一致
+                    { video: '鹏鹏正在赶路中.mp4', text: '鹏鹏正在赶路中' }        // 请确保文件名与实际一致
+                ];
+                const selected = randomAvatars[Math.floor(Math.random() * randomAvatars.length)];
+
+                // 切回虚拟人，保持 5 秒
+                setLeftPanelMode('avatar', selected.video, false);
+                persistentStatusText.innerHTML = selected.text + "...";
+                
+                await waitVideoEnd(avatarVideo, seqId);
+            }
+        }
+
+        // ★ 新增节点：找人任务到达门口
+        async function triggerFindArriveDoor() {
+            // 更新锁，打断前一个阶段（进门前）可能还在进行的等待
+            currentSequenceId++; 
+            const seqId = currentSequenceId;
+            
+            // 右侧：瞬间强切进门后视频
+            setRightVideo('机器人找人_进门后视频1.mp4', true); 
+
+            // ================= 核心修改 =================
+            // 在进门之后，开启交替循环，直到收到“到达观测点位(arrive_point)”的信号被打断
+            // while (seqId === currentSequenceId) {
+            //     // A. 切成机器人视角，保持 5 秒
+            //     setLeftPanelMode('stream', STREAM_MAP[1]); 
+            //     persistentStatusText.innerHTML = "机器人已进入休息室，正在前往观测点位...";
+                
+            //     await new Promise(r => setTimeout(r, 5000));
+            //     if (seqId !== currentSequenceId) break; // 若期间收到到达点位信号，立刻打断
+
+            //     // B. 切回虚拟人待机，保持 5 秒
+            //     setLeftPanelMode('avatar', '1.待机.mp4', true);
+            //     persistentStatusText.innerHTML = "鹏鹏正在努力走向何雅瑄...";
+                
+            //     await new Promise(r => setTimeout(r, 5000));
+            // }
+            while (seqId === currentSequenceId) {
+                // A. 切成机器人视角，保持 5 秒
+                setLeftPanelMode('stream', STREAM_MAP[1]); 
+                persistentStatusText.innerHTML = "机器人已进入休息室，正在前往观测点位...";
+                
+                await new Promise(r => setTimeout(r, 5000));
+                if (seqId !== currentSequenceId) break; // 若期间收到到达点位信号，立刻打断
+
+                // B. 随机选择其中一个虚拟人视频与文案
+                const randomAvatars = [
+                    { video: '鹏鹏正在努力走向何雅瑄.mp4', text: '鹏鹏正在努力走向何雅瑄' },   // 请确保文件名与实际一致
+                    { video: '鹏鹏快到何雅瑄那啦.mp4', text: '鹏鹏快到何雅瑄那啦' }        // 请确保文件名与实际一致
+                ];
+                const selected = randomAvatars[Math.floor(Math.random() * randomAvatars.length)];
+
+                // 切回虚拟人，保持 5 秒
+                setLeftPanelMode('avatar', selected.video, false);
+                persistentStatusText.innerHTML = selected.text + "...";
+                
+                await waitVideoEnd(avatarVideo, seqId);
+            }
+            // ============================================
+        }
+
+        // 找人任务到达观测点位
+        async function triggerFindArrive() {
+            currentSequenceId++;
+            const seqId = currentSequenceId;
+
+            persistentStatusText.innerHTML = "到达观测点位，正在执行视觉识别...";
+            updateStatusTheme('active');
+
+            setLeftPanelMode('stream', STREAM_MAP[1]);
+            setRightVideo('机器人正面视频.mp4', true); 
+            
+            videoMask.classList.remove('hidden');
+            mainCrosshair.classList.remove('hidden');
+            reidTip.classList.remove('hidden');
+            reidCount.innerText = '0';
+            reidSuccessCount = 0;
+
+            reidTimer = setTimeout(() => triggerFindFail(), REID_CONFIG.timeout);
+        }
+
+        function triggerReidOnce() {
+            if (currentTaskType !== "find") return;
+            if (reidSuccessCount < REID_CONFIG.successThreshold) {
+                reidSuccessCount++;
+                reidCount.innerText = reidSuccessCount;
+            }
+        }
+
+        async function triggerFindSuccess() {
+            pauseBgm(); // 🔊 任务成功，静音
+            currentSequenceId++;
+            const seqId = currentSequenceId;
+            isTaskWrappingUp = true;
+
+            if (reidTimer) {
+                clearTimeout(reidTimer);
+                reidTimer = null;
+            }
+
+            targetBbox.classList.remove('hidden');
+            reidTip.innerText = "识别成功，已锁定目标";
+            
+            setLeftPanelMode('avatar', '16.找到何雅瑄了.mp4', false); 
+            persistentStatusText.innerHTML = "识别成功，鹏鹏已确认何雅瑄位置";
+            updateStatusTheme('success');
+            // wsSend({ event: "reid_success", message: "连续4次识别成功" });
+
+            await waitVideoEnd(avatarVideo, seqId);
+            if (seqId !== currentSequenceId) return;
+
+            // 找人结果播报完成后，直接进入视频通话。
+            await enterCallMode();
+        }
+
+        async function triggerFindFail() {
+            pauseBgm(); // 🔊 任务失败，静音
+            currentSequenceId++;
+            const seqId = currentSequenceId;
+            isTaskWrappingUp = true; 
+
+            if (reidTimer) {
+                clearTimeout(reidTimer);
+                reidTimer = null;
+            }
+            // 如果后续正式环境需要，可以将视频名改回 17.未找到何雅瑄.mp4
+            // setLeftPanelMode('avatar', '17.未找到何雅瑄.mp4', false);
+            // persistentStatusText.innerHTML = "未找到何雅瑄，本次任务失败";
+            setLeftPanelMode('avatar', '16.找到何雅瑄了.mp4', false); 
+            persistentStatusText.innerHTML = "识别成功，鹏鹏已确认何雅瑄位置";
+            updateStatusTheme('error');
+            //wsSend({ event: "reid_fail", message: "超时未找人" });
+
+            await waitVideoEnd(avatarVideo, seqId);
+            if (seqId !== currentSequenceId) return;
+
+            // 找人失败也进入视频通话，由人工继续沟通。
+            await enterCallMode();
+        }
+
+        // ==================== 取物流程 ====================
+        async function triggerFetchStart() {
+            playBgm(); // 🔊明确任务，恢复播放背景音乐
+
+            currentTaskType = "fetch";
+            listeningForTask = false;
+            currentSequenceId++;
+            const seqId = currentSequenceId;
+
+            // 右侧播进门前的寻路视频
+            setLeftPanelMode('avatar', '9.机器人鹏鹏接到任务啦，正在帮您取咖啡.mp4', false);
+            setRightVideo('机器人从门口走到咖啡点位.mp4', true);
+            persistentStatusText.innerHTML = "机器人鹏鹏接到任务啦，正在帮您取咖啡。";
+            updateStatusTheme('active');
+
+            await waitVideoEnd(avatarVideo, seqId);
+            if (seqId !== currentSequenceId) return;
+
+            setLeftPanelMode('avatar', '10.鹏鹏正在前往休息室取咖啡.mp4', false);
+            persistentStatusText.innerHTML = "鹏鹏正在前往休息室取咖啡";
+
+            await waitVideoEnd(avatarVideo, seqId);
+            if (seqId !== currentSequenceId) return;
+
+            setLeftPanelMode('stream', STREAM_MAP[1]); 
+            persistentStatusText.innerHTML = "鹏鹏正在自主导航前往咖啡点位..."; 
+        }
+
+        async function triggerFetchArrive() {
+            currentSequenceId++;
+            const seqId = currentSequenceId;
+
+            setLeftPanelMode('avatar', '11.机器人鹏鹏看到咖啡啦，正在抓取中.mp4', false);
+            persistentStatusText.innerHTML = "机器人鹏鹏看到咖啡啦，正在抓取中...";
+            updateStatusTheme('active');
+
+            await waitVideoEnd(avatarVideo, seqId);
+            if (seqId !== currentSequenceId) return;
+
+            setLeftPanelMode('stream', STREAM_MAP[2]); 
+            setRightVideo('机器人抓取特写视频.mp4', true);
+        }
+
+        // 抓取完成，开始返航起步
+        /*async function triggerNavRestart() {
+            currentSequenceId++;
+            const seqId = currentSequenceId;
+
+            setLeftPanelMode('avatar', '12.机器人鹏鹏拿着咖啡，送过来啦.mp4', false);
+            setRightVideo('机器人从咖啡点位走回门口.mp4', true); 
+            persistentStatusText.innerHTML = "机器人鹏鹏拿着咖啡，送过来啦。";
+            updateStatusTheme('active');
+
+            // 仅等待左侧虚拟人视频播放完毕即可，不再死等右侧视频
+            await waitVideoEnd(avatarVideo, seqId);
+            if (seqId !== currentSequenceId) return;
+
+            setLeftPanelMode('stream', STREAM_MAP[1]); 
+            persistentStatusText.innerHTML = "机器人正在离开咖啡点位，准备进入走廊...";
+        }
+
+        // ★ 新增节点：取物任务返航到达 Door 1
+        async function triggerFetchArriveDoor1() {
+            currentSequenceId++;
+            const seqId = currentSequenceId;
+
+            // 瞬间强切右侧视频为走廊
+            setRightVideo('机器人送咖啡.mp4', true); 
+            
+            // 左侧配合触发 V13 的语音播报
+            setLeftPanelMode('avatar', '13.机器人鹏鹏离开休息室，正在走廊中平稳步行.mp4', false);
+            persistentStatusText.innerHTML = "机器人鹏鹏离开休息室，正在走廊中平稳步行";
+            
+            await waitVideoEnd(avatarVideo, seqId);
+            if (seqId !== currentSequenceId) return;
+
+            // 播报结束后切回第一视角
+            setLeftPanelMode('stream', STREAM_MAP[1]); 
+        }*/
+
+        // 抓取完成，开始返航起步 (阶段一：点位 -> 门口)
+        async function triggerNavRestart() {
+            currentSequenceId++;
+            const seqId = currentSequenceId;
+
+            setLeftPanelMode('avatar', '12.机器人鹏鹏拿着咖啡，送过来啦.mp4', false);
+            setRightVideo('机器人从咖啡点位走回门口.mp4', true); 
+            persistentStatusText.innerHTML = "机器人鹏鹏拿着咖啡，送过来啦。";
+            updateStatusTheme('active');
+
+            // 仅等待左侧虚拟人视频播放完毕即可
+            await waitVideoEnd(avatarVideo, seqId);
+            if (seqId !== currentSequenceId) return;
+
+            // ================= 新增：返航第一阶段交替循环 =================
+            while (seqId === currentSequenceId) {
+                // A. 切成机器人视角，保持 5 秒
+                setLeftPanelMode('stream', STREAM_MAP[1]); 
+                persistentStatusText.innerHTML = "机器人正在离开咖啡点位，准备进入走廊...";
+                
+                await new Promise(r => setTimeout(r, 5000));
+                if (seqId !== currentSequenceId) break; 
+
+                // B. 随机选择其中一个虚拟人视频与文案
+                const randomAvatars = [
+                    { video: '咖啡拿稳啦鹏鹏正在回来的路上.mp4', text: '咖啡拿稳啦，鹏鹏正在回来的路上' },
+                    { video: '鹏鹏正拿着咖啡小心翼翼往回走哦.mp4', text: '鹏鹏正拿着咖啡，小心翼翼往回走哦' },
+	   	            { video: '鹏鹏开始返航啦.mp4', text: '鹏鹏开始返航啦' }  
+                ];
+                const selected = randomAvatars[Math.floor(Math.random() * randomAvatars.length)];
+
+                // 切回虚拟人，保持 5 秒
+                setLeftPanelMode('avatar', selected.video, false);
+                persistentStatusText.innerHTML = selected.text + "...";
+                
+                await waitVideoEnd(avatarVideo, seqId);
+            }
+            // ============================================================
+        }
+
+        // 取物任务返航到达 Door 1 (阶段二：门口 -> 210)
+        async function triggerFetchArriveDoor1() {
+            currentSequenceId++;
+            const seqId = currentSequenceId;
+
+            // 瞬间强切右侧视频为走廊
+            setRightVideo('机器人送咖啡.mp4', true); 
+            
+            // 左侧配合触发 V13 的语音播报
+            setLeftPanelMode('avatar', '13.机器人鹏鹏离开休息室，正在走廊中平稳步行.mp4', false);
+            persistentStatusText.innerHTML = "机器人鹏鹏离开休息室，正在走廊中平稳步行";
+            
+            await waitVideoEnd(avatarVideo, seqId);
+            if (seqId !== currentSequenceId) return;
+
+            // ================= 新增：返航第二阶段交替循环 =================
+            while (seqId === currentSequenceId) {
+                // A. 切成机器人视角，保持 5 秒
+                setLeftPanelMode('stream', STREAM_MAP[1]); 
+                persistentStatusText.innerHTML = "机器人已进入走廊，正在前往房间...";
+                
+                await new Promise(r => setTimeout(r, 5000));
+                if (seqId !== currentSequenceId) break; 
+
+                // B. 随机选择其中一个虚拟人视频与文案
+                const randomAvatars = [
+                    { video: '鹏鹏进入走廊啦离您越来越近了.mp4', text: '鹏鹏进入走廊啦，离您越来越近了' }, 
+                    { video: '咖啡快到了请您稍等一下哦.mp4', text: '咖啡快到了，请您稍等一下哦' },
+	   	            { video: '不要着急哦鹏鹏快到了.mp4', text: '不要着急哦，鹏鹏快到了' } 
+                ];
+                const selected = randomAvatars[Math.floor(Math.random() * randomAvatars.length)];
+
+                // 切回虚拟人，保持 5 秒
+                setLeftPanelMode('avatar', selected.video, false);
+                persistentStatusText.innerHTML = selected.text + "...";
+                
+                await waitVideoEnd(avatarVideo, seqId);
+            }
+            // ============================================================
+        }
+
+        // ★ 新增节点：取物任务返航到达 Door 2 (210)
+        function triggerFetchArriveDoor2() {
+            // 瞬间强切右侧视频为进房间
+            setRightVideo('机器人进210视频.mp4', true); 
+            persistentStatusText.innerHTML = "机器人进入房间210";
+        }
+
+        async function triggerFetchEnd() {
+            pauseBgm(); // 🔊 任务结束，静音
+            currentSequenceId++;
+            const seqId = currentSequenceId;
+            isTaskWrappingUp = true; 
+
+            updateStatusTheme('success');
+
+            await waitVideoEnd(avatarVideo, seqId);
+            if (seqId !== currentSequenceId) return;
+
+            triggerStandby();
+        }
+
+        async function triggerTaskFinished() {
+            pauseBgm(); // 🔊 任务结束，静音
+            currentSequenceId++;
+            const seqId = currentSequenceId;
+            isTaskWrappingUp = true; 
+
+            persistentStatusText.innerHTML = "任务结束，大屏即将返回待机";
+            updateStatusTheme('success');
+            hideReidUI();
+            
+            await new Promise(r => setTimeout(r, 3000));
+            if (seqId !== currentSequenceId) return;
+
+            triggerStandby();
+        }
+
+        function hideReidUI() {
+            targetBbox.classList.add('hidden');
+            mainCrosshair.classList.add('hidden');
+            videoMask.classList.add('hidden');
+            reidTip.classList.add('hidden');
+        }
+
+        // ========== 虚拟人声波联动展示 ==========
+        function updateSoundWave() {
+            const currentSrc = decodeURIComponent(avatarVideo.src);
+            if (!currentSrc.includes('1.待机.mp4') && !avatarVideo.paused && !avatarVideo.ended && avatarVideo.currentTime > 0) {
+                soundWaveContainer.classList.remove('hidden');
+                waveGlow.classList.remove('hidden');
+            } else {
+                soundWaveContainer.classList.add('hidden');
+                waveGlow.classList.add('hidden');
+            }
+        }
+        
+        ['play', 'playing', 'pause', 'ended', 'timeupdate'].forEach(evt => {
+            avatarVideo.addEventListener(evt, updateSoundWave);
+        });
+
+        // ========== 动态生成高密度对称声波 ==========
+        function initAdvancedSoundWave() {
+            const mainContainer = document.getElementById('main-wave-container');
+            if (!mainContainer) return;
+            mainContainer.innerHTML = '';
+
+            const mainBars = 110;
+            for(let i = 0; i < mainBars; i++) {
+                const bar = document.createElement('div');
+                bar.className = 'sound-bar-main';
+                
+                const normalizedPos = (i / (mainBars - 1)) * 2 - 1; 
+                const envelope = 1 - Math.pow(Math.abs(normalizedPos), 2.5); 
+                
+                const rand = Math.random();
+                let heightPercent;
+                if(rand > 0.85) heightPercent = 65 + Math.random()*35; 
+                else if(rand > 0.3) heightPercent = 30 + Math.random()*35; 
+                else heightPercent = 10 + Math.random()*20; 
+                
+                heightPercent = heightPercent * (0.2 + 0.8 * envelope);
+                bar.style.height = `${heightPercent}%`;
+                
+                const duration = (0.2 + Math.random() * 0.4).toFixed(2);
+                const delay = -(Math.random() * 2).toFixed(2);
+                const animType = Math.floor(Math.random() * 4) + 1;
+                
+                bar.style.animation = `wave-eq-${animType} ${duration}s ease-in-out ${delay}s infinite alternate`;
+                mainContainer.appendChild(bar);
+            }
+        }
+
+        // ========== WebSocket 连接 & 核心事件分发机制 ==========
+        const WS_URL = "ws://127.0.0.1:8001/ws/dashboard_control";
+        let ws = null;
+
+        function processWsMessage(event, text, taskType = "") {
+            // 视频通话是最高优先级状态；机器人状态消息不能打断通话。
+            if (isCallMode) {
+                console.log('通话中，忽略大屏事件:', event);
+                return;
+            }
+
+            // 任务执行中，忽略低优先级的举手/监听事件，禁止打断任务
+            if ((event === "hand_up" || event === "listen") && currentTaskType !== "") {
+                return;
+            }
+            switch (event) {
+                case "task_standby":
+                    triggerStandby();
+                    break;
+                case "hand_up": 
+                case "listen":
+                    triggerListen();
+                    break;
+                case "command":
+                    // A1 任务按明确类型切换；保留旧模拟信号的文字匹配。
+                    if (taskType === "fetch_object") {
+                        triggerFetchStart();
+                    } else if (taskType === "wait_person") {
+                        triggerFindStart();
+                    } else if (text.includes("咖啡") || text.includes("取物")) {
+                        triggerFetchStart();
+                    } else if (text.includes("徐静") || text.includes("找人") || text.includes("寻找")) {
+                        triggerFindStart();
+                    }
+                    break;
+                
+                // ★ 找人任务新增节点分发
+                case "arrive_door":
+                    if (currentTaskType === "find") triggerFindArriveDoor();
+                    break;
+
+                // ★ 取物任务新增节点分发
+                case "arrive_door_1":
+                    if (currentTaskType === "fetch") triggerFetchArriveDoor1();
+                    break;
+                case "arrive_door_2":
+                    if (currentTaskType === "fetch") triggerFetchArriveDoor2();
+                    break;
+
+                case "nav_end": 
+                case "arrive_point":
+                    if (currentTaskType === "find") triggerFindArrive();
+                    else if (currentTaskType === "fetch") triggerFetchArrive();
+                    break;
+                case "reid_once":
+                case "target_match":
+                    triggerReidOnce();
+                    break;
+                case "target_found":
+                case "reid_success":
+                    triggerFindSuccess();
+                    break;
+                case "reid_fail":
+                case "target_not_found":
+                    isTaskWrappingUp = true; 
+                    triggerFindFail();
+                    break;
+                case "nav_start":
+                case "grab_finish":
+                    if (currentTaskType === "fetch") triggerNavRestart();
+                    break;
+                case "fetch_task_end":
+                    if (currentTaskType === "fetch") {
+                        isTaskWrappingUp = true; 
+                        triggerFetchEnd();
+                    }
+                    break;
+                case "task_finished":
+                    if (currentTaskType !== "") {
+                        isTaskWrappingUp = true; 
+                        triggerTaskFinished();
+                    }
+                    break;
+            }
+        }
+
+        function initWebSocket() {
+            ws = new WebSocket(WS_URL);
+
+            ws.onopen = function () { connectionStatus.classList.replace('text-stone-400', 'text-emerald-400'); };
+
+            ws.onmessage = function (evt) {
+                try {
+                    const data = JSON.parse(evt.data);
+
+                    if (isCallMode) {
+                        console.log('通话中，忽略收到的大屏消息:', data.event);
+                        return;
+                    }
+                    
+                    if (isTaskWrappingUp) {
+                        wsQueue.push(data);
+                        return;
+                    }
+                    processWsMessage(data.event, data.text || "", data.task_type);
+                } catch (e) {
+                    console.error("信号解析异常:", e);
+                }
+            };
+
+            ws.onclose = function () {
+                connectionStatus.classList.replace('text-emerald-400', 'text-stone-400');
+                setTimeout(initWebSocket, 3000);
+            };
+
+            ws.onerror = function () {
+                connectionStatus.classList.replace('text-emerald-400', 'text-stone-400');
+            };
+        }
+
+        window.onload = function () {
+            initWebSocket();
+            initAdvancedSoundWave();
+
+            // 调试入口：http://127.0.0.1:8080/?call=1 可直接进入通话层。
+            if (new URLSearchParams(location.search).get('call') === '1') {
+                blackScreen.classList.add('hidden');
+                setTimeout(() => enterCallMode(), 100);
+            }
+        };
+    </script>
+</body>
+</html>
