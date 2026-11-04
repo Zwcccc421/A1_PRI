@@ -1,0 +1,92 @@
+一、a1服务器端
+改了启动脚本 [run_streaming_a1_full_20260624.sh] 的 4 处：
+1. A1→A4 地址
+   http://192.168.1.118:8000/api/text
+   改为服务器回环地址 http://127.0.0.1:18083/a1/task，经 SSH 隧道直达本机 A4。
+2. 摄像头地址
+   http://10.113.61.201:18081/latest.jpg
+   改为 http://127.0.0.1:18081/latest.jpg，经隧道读取本机 USB 摄像头。
+3. 音频地址
+   http://10.113.61.201:18081/audio.pcm
+   改为 http://127.0.0.1:18081/audio.pcm
+4. Conda 初始化（不重要）
+   在启动脚本中增加：source /data0/tangt/anaconda3/etc/profile.d/conda.sh
+   这样通过 SSH 或 nohup 后台启动时也能找到 conda。
+   原有的启动命令仍为：
+   conda run --no-capture-output -n a1 python ...
+
+服务器启动脚本备份：
+/data0/tangt/a1_system/a1_full_pipeline_improved/run_streaming_a1_full_20260624.sh.backup_20260928_091655
+
+二、音视频采集
+集成和大屏幕服务一起启动
+在 stream_receiverV9.py 中新增本机音视频服务检查与启动函数。
+   启动 stream_receiverV9.py 时，如 127.0.0.1:18081 未运行，
+   自动启动 camera_computer_package 的 USB 摄像头和麦克风采集服务。
+
+三、a4大屏幕端
+统一在本地a1环境下运行
+仅修改了 full_process0714.py
+1. 新增 A1 直连任务入口
+   在 A4 的 8004 回调服务中新增： POST /a1/task
+   用于接收 A1 直接发送的任务，不再要求 A4 从 A1 读取文件。
+
+2. 新增 A1 任务报文解析
+   解析 A1 发送的任务内容，支持：
+   - wait_person
+   - fetch_object
+   并校验 task_id，避免无效报文进入原有任务流程。
+
+3. A1 任务分发方式
+   接收到 /a1/task 后，直接调用原有的找人或取物任务处理流程。
+增加任务运行锁：当前已有任务时，拒绝新的 A1 任务，避免重复执行。
+
+   保留原有 A2/A3 回调、视频、大屏和状态机代码不变。
+
+4. 关闭旧 A1 文件轮询
+   注释掉轮询 
+# threading.Thread(target=hand_raise_monitor, daemon=True).start()
+# file_monitor_and_task_dispatcher()
+
+   原来的 final.json、task_request.json 文件中转方式不再使用
+
+四、新增本地同时运行脚本，支持a1a4集成后的本地端所有功能运行
+已新增统一启动脚本：[start_a1a4_local.ps1](C:\Users\robot\Desktop\A1A4\start_a1a4_local.ps1)。
+
+它会一次处理：
+1. `stream_receiverV9.py`  
+   自动启动本机摄像头和麦克风。
+2. `full_process0714.py`
+3. `pc_b_v3.py`
+4. SSH 反向隧道  
+   - 服务器 `18081` → 本机音视频 `18081`
+   - 服务器 `18083` → 本机 A4 `8004`
+
+
+五、使用教程
+1、本地运行调试
+conda activate a1
+cd C:\Users\robot\Desktop\A1A4\可视化0610
+
+python stream_receiverV9.py（手动设置LOCAL_CAMERA_INDEX = 0/1）
+python -X utf8 full_process0714.py
+python pc_b_v3.py
+
+大屏地址：
+http://127.0.0.1:8080/
+
+2、服务器端运行
+ssh a1-server
+cd /data0/tangt/a1_system/a1_full_pipeline_improved
+bash run_streaming_a1_full_20260624.sh
+
+3、模拟 A2 信号
+conda activate a1
+cd C:\Users\robot\Desktop\A1A4\可视化0610
+python -X utf8 mock_a2_signals0720.py
+
+
+Windows端口占用：
+netstat -ano | findstr :8001
+taskkill /F /PID 33068（对应）
+

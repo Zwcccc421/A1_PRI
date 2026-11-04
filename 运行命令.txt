@@ -1,0 +1,48 @@
+先进入项目目录：
+cd C:\Users\robot\Desktop\A1A4
+启动全部组件：
+powershell -ExecutionPolicy Bypass -File .\start_a1a4_oneclick.ps1 -Component all
+单独启动：
+# 视频接收 + 摄像头
+powershell -ExecutionPolicy Bypass -File .\start_a1a4_oneclick.ps1 -Component receiver
+
+# 任务流程服务
+powershell -ExecutionPolicy Bypass -File .\start_a1a4_oneclick.ps1 -Component flow
+
+# 大屏服务
+powershell -ExecutionPolicy Bypass -File .\start_a1a4_oneclick.ps1 -Component dashboard
+
+# 服务器端 A1
+powershell -ExecutionPolicy Bypass -File .\start_a1a4_oneclick.ps1 -Component remote
+指定摄像头编号启动：
+powershell -ExecutionPolicy Bypass -File .\start_a1a4_oneclick.ps1 -Component receiver -CameraIndex 0
+关闭全部组件：
+powershell -ExecutionPolicy Bypass -File .\stop_a1a4_oneclick.ps1 -Component all
+单独关闭：
+# 视频接收 + 摄像头
+powershell -ExecutionPolicy Bypass -File .\stop_a1a4_oneclick.ps1 -Component receiver
+
+# 任务流程服务
+powershell -ExecutionPolicy Bypass -File .\stop_a1a4_oneclick.ps1 -Component flow
+
+# 大屏服务
+powershell -ExecutionPolicy Bypass -File .\stop_a1a4_oneclick.ps1 -Component dashboard
+
+# 服务器端 A1 + SSH 隧道
+powershell -ExecutionPolicy Bypass -File .\stop_a1a4_oneclick.ps1 -Component remote
+只查看当前状态：
+powershell -ExecutionPolicy Bypass -File .\start_a1a4_oneclick.ps1 -Status
+或者：
+powershell -ExecutionPolicy Bypass -File .\stop_a1a4_oneclick.ps1 -Status
+如果关闭脚本无法读取进程，使用“管理员身份运行 PowerShell”。
+
+
+########################################
+重启大屏幕回到初始状态：关闭A4任务流程，打开A4任务流程
+# 关闭任务流程服务
+powershell -ExecutionPolicy Bypass -File .\stop_a1a4_oneclick.ps1 -Component flow
+# 打开任务流程服务
+powershell -ExecutionPolicy Bypass -File .\start_a1a4_oneclick.ps1 -Component flow
+
+服务器代码好像需要手动重启
+如果通话有问题，看一下是否是a端ip变了！！！！！
