@@ -1,0 +1,22 @@
+C:\Users\robot\Desktop\A1A4\可视化0610\stream_receiverV9.py:199: DeprecationWarning: 
+        on_event is deprecated, use lifespan event handlers instead.
+
+        Read more about it in the
+        [FastAPI docs for Lifespan Events](https://fastapi.tiangolo.com/advanced/events/).
+        
+  @app.on_event("startup")
+C:\Users\robot\Desktop\A1A4\可视化0610\stream_receiverV9.py:210: DeprecationWarning: 
+        on_event is deprecated, use lifespan event handlers instead.
+
+        Read more about it in the
+        [FastAPI docs for Lifespan Events](https://fastapi.tiangolo.com/advanced/events/).
+        
+  @app.on_event("shutdown")
+INFO:     Started server process [18584]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8001 (Press CTRL+C to quit)
+INFO:     127.0.0.1:60087 - "WebSocket /ws/dashboard_control" [accepted]
+INFO:     connection open
+INFO:     127.0.0.1:65289 - "WebSocket /ws/dashboard_control" [accepted]
+INFO:     connection open

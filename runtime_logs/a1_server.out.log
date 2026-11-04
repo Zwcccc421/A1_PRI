@@ -1,0 +1,110 @@
+funasr version: 1.3.9.
+Downloading Model from https://www.modelscope.cn to directory: /data0/tangt/a1_system/a1_full_pipeline_improved/models/modelscope_cache/models/iic/speech_paraformer-large_asr_nat-zh-cn-16k-common-vocab8404-online
+
+============================================================
+  A1 真流式监听已启动：边说边出字，固定关键词命中后立即输出 JSON
+============================================================
+{
+  "iteration": 1,
+  "final_json": {
+    "task_id": "task_002",
+    "timestamp": "2026-10-29 06:38:24",
+    "robot_name": "鹏鹏",
+    "trigger_type": "gesture",
+    "voice_trigger": false,
+    "gesture_trigger": true,
+    "care_recipient_id": "张文超",
+    "original_text": "张爱颖还是路人去的不好吗我要找何雅",
+    "task_type": "wait_person",
+    "target_person": "徐静",
+    "target_scene": "餐厅",
+    "dispatch_to": [
+      "A2",
+      "A4"
+    ],
+    "response_text": "好的张文超，我去餐厅帮您找徐静。",
+    "_profile_sec": {
+      "streaming": {
+        "stream_asr_last_sec": 0.14,
+        "stream_asr_total_sec": 1.113,
+        "stream_asr_calls": 9,
+        "audio_rms": 6011.0,
+        "audio_peak": 32566.0,
+        "dispatch_sec": 3.146
+      }
+    }
+  },
+  "elder_view_stream_url": "http://219.223.204.104:18080/video.mjpg",
+  "dispatch_result": {
+    "A2_scp": {
+      "ok": false,
+      "target": "unitree@192.168.1.118:/home/unitree/Unitree_G1_Navigation/submit.json",
+      "error": "Command '['scp', '/tmp/a1_latest_task.json', 'unitree@192.168.1.118:/home/unitree/Unitree_G1_Navigation/submit.json']' timed out after 3.0 seconds"
+    },
+    "A4_text": {
+      "ok": true,
+      "status_code": 202,
+      "text": "{\"ok\": true, \"message\": \"A1 task accepted\", \"task_id\": \"task_002\"}"
+    }
+  },
+  "profile_sec": {
+    "stream_asr_last_sec": 0.14,
+    "stream_asr_total_sec": 1.113,
+    "stream_asr_calls": 9,
+    "audio_rms": 6011.0,
+    "audio_peak": 32566.0,
+    "dispatch_sec": 3.146
+  }
+}
+{
+  "iteration": 2,
+  "final_json": {
+    "task_id": "task_004",
+    "timestamp": "2026-10-29 06:56:30",
+    "robot_name": "鹏鹏",
+    "trigger_type": "gesture",
+    "voice_trigger": false,
+    "gesture_trigger": true,
+    "care_recipient_id": "何雅瑄",
+    "original_text": "哎就我这说实话真真没怎么看过就这个line game因为一直没说没因后定位了我们在line get withextreme文件里面找半",
+    "task_type": "wait_person",
+    "target_person": "徐静",
+    "target_scene": "餐厅",
+    "dispatch_to": [
+      "A2",
+      "A4"
+    ],
+    "response_text": "好的何雅瑄，我去餐厅帮您找徐静。",
+    "_profile_sec": {
+      "streaming": {
+        "stream_asr_last_sec": 0.171,
+        "stream_asr_total_sec": 3.017,
+        "stream_asr_calls": 17,
+        "audio_rms": 2315.0,
+        "audio_peak": 11893.0,
+        "dispatch_sec": 3.043
+      }
+    }
+  },
+  "elder_view_stream_url": "http://219.223.204.104:18080/video.mjpg",
+  "dispatch_result": {
+    "A2_scp": {
+      "ok": false,
+      "target": "unitree@192.168.1.118:/home/unitree/Unitree_G1_Navigation/submit.json",
+      "error": "Command '['scp', '/tmp/a1_latest_task.json', 'unitree@192.168.1.118:/home/unitree/Unitree_G1_Navigation/submit.json']' timed out after 3.0 seconds"
+    },
+    "A4_text": {
+      "ok": true,
+      "status_code": 202,
+      "text": "{\"ok\": true, \"message\": \"A1 task accepted\", \"task_id\": \"task_004\"}"
+    }
+  },
+  "profile_sec": {
+    "stream_asr_last_sec": 0.171,
+    "stream_asr_total_sec": 3.017,
+    "stream_asr_calls": 17,
+    "audio_rms": 2315.0,
+    "audio_peak": 11893.0,
+    "dispatch_sec": 3.043
+  }
+}

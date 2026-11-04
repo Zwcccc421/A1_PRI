@@ -1,0 +1,7 @@
+[2026-10-29 16:12:08] 直连模式：等待 A1 POST /a1/task
+[2026-10-29 16:12:08] A2事件回调服务已启动: http://0.0.0.0:8004/
+[2026-10-29 16:12:08] [大屏信号] event=task_standby task_id=None response={"status":"success","broadcast_count":1,"saved_to":"C:\\Users\\robot\\Desktop\\A1A4\\可视化0610\\received_data\\signals.jsonl"}
+[2026-10-29 16:13:02] ============================================================
+[2026-10-29 16:13:02] 收到A2回调 POST /a1/task  from 127.0.0.1
+[2026-10-29 16:13:02] [A1 唤醒] trigger=gesture recipient=张文超
+[2026-10-29 16:13:02] [大屏信号] event=listen task_id=None response={"status":"success","broadcast_count":0,"saved_to":"C:\\Users\\robot\\Desktop\\A1A4\\可视化0610\\received_data\\signals.jsonl"}
